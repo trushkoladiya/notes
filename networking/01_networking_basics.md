@@ -61,3 +61,128 @@ To send mail, you need a name and an address. Computers need the same thing to s
 > *   **IP Address:** Used to locate the device across different networks.
 > *   **MAC Address:** Used to deliver the data to the physical device once it is on the local network.
 
+### 3. How IP Addresses are Assigned (DHCP)
+Right now, you know that IP addresses are "logical addresses assigned by the network," but how does that actually happen? You don't have to manually type in an IP address every time you connect to a new Wi-Fi network. Instead, your device talks to a **DHCP (Dynamic Host Configuration Protocol)** server.
+
+#### What is DHCP?
+DHCP is a network protocol used to automatically assign IP addresses and other network configuration settings to devices on a network. 
+
+#### The DORA Process (How it Works)
+When your device connects to a network, it goes through a 4-step handshake to lease an IP address. Think of it as **DORA**:
+
+1.  **Discover:** The client broadcasts a message to the network: *"Hey, is there a DHCP server out there? I need an IP address!"*
+2.  **Offer:** The DHCP server replies with an offer: *"Yes, I'm here! I have IP address 192.168.1.50 available for you to use."*
+3.  **Request:** The client replies: *"Awesome, I would like to lease IP address 192.168.1.50, please!"*
+4.  **Acknowledge (ACK):** The DHCP server confirms: *"Got it! IP address 192.168.1.50 is now locked in for your device. Go ahead and use it!"*
+
+```text
+[ THE DORA PROCESS ]
+
+   Client (Device)                             DHCP Server
+         │                                          │
+         │───────── DISCOVER (Broadcast) ──────────>│
+         │                                          │
+         │<────────── OFFER (Unicast) ──────────────│
+         │                                          │
+         │───────── REQUEST (Broadcast) ───────────>│
+         │                                          │
+         │<────────── ACKNOWLEDGE (Unicast) ────────│
+         │                                          │
+```
+
+#### What a DHCP Server Assigns
+It doesn't just hand out an IP address. To fully configure your device's network settings, it assigns four critical values:
+*   **IP Address:** Your unique logical address on the street.
+*   **Subnet Mask:** Defines how big the street network is.
+*   **Default Gateway:** The exit door (router's IP) to get off your street and onto the internet.
+*   **DNS Server:** The phone book server that translates domain names into IP addresses.
+
+#### Where does the DHCP Server live?
+*   **In Home Networks:** It runs directly inside your all-in-one **home router**.
+*   **In Enterprise Networks:** Large companies have too many devices for a router to manage, so they run DHCP on a dedicated, central **Enterprise Server**.
+
+### 4. Packets (How Data Travels)
+When you send a large file (like a photo or a video), it is not sent all at once. If it were, and a single error occurred, you would have to resend the entire file.
+
+```text
+[Large File (e.g. Photo)]
+       │
+       ▼ (Fragmentation)
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│Packet 1 (Hdr)│   │Packet 2 (Hdr)│   │Packet 3 (Hdr)│  (Typically max 1500 bytes)
+└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          ▼ (Transmitted over wire/air)
+┌────────────────────────────────────────────────────┐
+│                    Network Wire                    │
+└─────────────────────────┬──────────────────────────┘
+                          ▼ (Reassembly at destination)
+[Original Large File Reconstructed]
+```
+
+*   **Data Packet:** The network breaks the large file down into tiny pieces called packets (typically capped at **1,500 bytes** of data).
+*   **Packet Header:** Every packet has a "header" stuck to the front of it. The header contains critical information, including the sender's IP address and the receiver's IP address.
+*   **Reassembly:** Once all the packets reach the destination, the receiver's device puts them back in order to reconstruct the original file.
+*   **Jumbo Frames:** Some specialized networks support larger packets up to **9,000 bytes** to speed up data transfer.
+
+### 5. Communication Types
+Devices talk to each other in three different ways:
+*   **Unicast:** One-to-one communication (like a private WhatsApp message).
+*   **Multicast:** One-to-selected-many communication (like a Zoom video call with a specific group of people).
+*   **Broadcast:** One-to-all communication (like a radio station broadcasting to every radio in range).
+
+### 6. Network Types (Based on Size)
+We classify networks by how much physical area they cover:
+
+| Type | Full Name | Geographic Scope | Typical Example |
+| :--- | :--- | :--- | :--- |
+| **PAN** | Personal Area Network | Immediate user space (~10 meters) | Bluetooth phone connecting to smartwatch. |
+| **LAN** | Local Area Network | Single building, home, or office | Home Wi-Fi network or school office. |
+| **WLAN** | Wireless LAN | Wireless LAN coverage area | Devices connected to a home router without cables. |
+| **MAN** | Metropolitan Area Network | Town, city, or large campus | College Wi-Fi spread across a city campus. |
+| **WAN** | Wide Area Network | Countries, continents, or global | The Internet (the ultimate WAN). |
+
+---
+
+## Important Things to Remember
+
+*   **Host:** Any device connected to a network that can send/receive data.
+*   **NIC (Network Interface Card):** The physical hardware inside a device that lets it connect to a network.
+*   **MAC Address:** A permanent, 12-digit physical address burned into the hardware.
+*   **IP Address:** A temporary, logical address that changes based on your network location.
+*   **Packets:** Small pieces of data (usually max 1500 bytes) sent over the network to make communication reliable and efficient.
+*   **LAN vs WAN:** LAN is local (your house/office), WAN covers huge geographic distances (the Internet).
+
+---
+
+## Diagram
+
+Here is a simple look at how devices connect to share a printer in a Local Area Network (LAN):
+
+```text
+  +------------------+          +------------------+
+  |    Computer A    |          |    Computer B    |
+  | MAC: AA:AA:AA... |          | MAC: BB:BB:BB... |
+  +--------+---------+          +--------+---------+
+           |                             |
+     Ethernet Cable                 Ethernet Cable
+           |                             |
+  +--------v-----------------------------v----------+
+  |                  Network Switch                 |
+  +------------------------+------------------------+
+                           |
+                     Ethernet Cable
+                           |
+                  +--------v---------+
+                  |  Shared Printer  |
+                  | MAC: PP:PP:PP... |
+                  +------------------+
+```
+
+---
+
+## Related Topics
+
+*   [Network Devices](file:///home/trush/Downloads/x/02_network_devices.md) - The hardware (like switches and routers) that physically connects these devices together.
+*   [IP Addresses & Subnetting](file:///home/trush/Downloads/x/04_ip_addresses_and_subnetting.md) - A deep dive into how IP addresses work and how we divide them.

@@ -104,3 +104,145 @@ Subnetting is the process of stealing bits from the **Host portion** (zeros) and
     *   *Why subtract 2?* Every subnet reserves the **first** address (Subnet ID) and the **last** address (Broadcast address). You cannot assign these to devices.
 
 ---
+
+### Example A: Subnetting by Network Requirements (Creating 4 Subnets)
+Suppose we start with the network `192.168.1.0/24`. The default subnet mask in binary is:
+`11111111.11111111.11111111.00000000` (three octets of ones, last octet of zeros).
+
+We need **4 networks** for our home (User, IoT, WAPs, Guest).
+1.  **Find how many bits to steal:** Look at the powers of 2. `2^2 = 4`. We need to steal **2 bits** from the host portion.
+2.  **Modify the Mask:** We steal 2 bits from the left side of the last octet.
+    *   Old last octet: `00000000`
+    *   New last octet: `11000000` (The mask becomes `/26` or `255.255.255.192` since `128 + 64 = 192`).
+3.  **Find the Increment:** The increment is the decimal value of the *last network bit* (the rightmost `1` in the mask).
+    *   In our last octet (`11000000`), the last `1` is in the `64` column. Our **increment is 64**.
+4.  **Write out the Subnets:** Add the increment (`64`) starting from `.0`:
+    *   **Subnet 1:** `192.168.1.0/26` (Usable IP range: `.1` to `.62`, Broadcast: `.63`)
+    *   **Subnet 2:** `192.168.1.64/26` (Usable IP range: `.65` to `.126`, Broadcast: `.127`)
+    *   **Subnet 3:** `192.168.1.128/26` (Usable IP range: `.129` to `.190`, Broadcast: `.191`)
+    *   **Subnet 4:** `192.168.1.192/26` (Usable IP range: `.193` to `.254`, Broadcast: `.255`)
+
+---
+
+### Example B: Subnetting by Host Requirements (Designing a Coffee Shop)
+Suppose we have a network block `10.1.1.0/24` and we need to design a network for a coffee shop. The shop needs **40 host addresses** (wiggle room included).
+
+1.  **Find how many host bits to save:** How many zeros do we need to keep from right to left?
+    *   `2^5 = 32` (Too small, we need 40).
+    *   `2^6 = 64` (Perfect). We must **save 6 host bits (zeros)**.
+2.  **Modify the Mask:** Starting from the right, keep 6 zeros, and turn the rest into ones.
+    *   New last octet: `11000000` (Mask is `/26` or `255.255.255.192`).
+3.  **Find the Increment:** The last network bit is in the `64` column. The **increment is 64**.
+4.  **Write out the Subnet:** 
+    *   `10.1.1.0/26` (Usable: `10.1.1.1` to `10.1.1.62`, Broadcast: `10.1.1.63`). This gives us 62 usable hosts, which easily covers our requirement of 40.
+
+---
+
+### Example C: Reverse Subnetting (Troubleshooting a Ticket)
+You get a ticket: *"Beatrice cannot connect to anything. Her IP is `172.17.12.255` and the mask is `255.255.240.0` (/20). Her default gateway is `172.17.0.1`."* Let's reverse-engineer this configuration:
+
+1.  **Convert the Subnet Mask to Binary:**
+    *   `255.255.240.0` => `11111111.11111111.11110000.00000000`
+2.  **Find the Increment:**
+    *   The subnetting is happening in the **third octet** (`11110000`).
+    *   The last `1` is in the 4th column (`128 | 64 | 32 | 16`), so the **increment is 16**.
+3.  **Build the Subnet Boundaries:**
+    *   Subnet 1: `172.17.0.0` to `172.17.15.255` (Broadcast: `172.17.15.255`)
+    *   Subnet 2: `172.17.16.0` to `172.17.31.255`
+4.  **Analyze Beatrice's IP:**
+    *   Beatrice's IP is `172.17.12.255`. Since it falls between `172.17.0.0` and `172.17.15.255`, she belongs to the first subnet.
+    *   **Is her IP valid?** Yes! In this `/20` subnet, the broadcast address is `172.17.15.255`. Thus, `172.17.12.255` is a valid usable host address!
+    *   **What is the problem?** Her default gateway is `172.17.0.1`. The default gateway belongs to the same subnet, but wait: is the router physically configured on that subnet? Let's check the router. If the router's interface is configured in a different subnet, she won't be able to route traffic.
+
+---
+
+### Variable Length Subnet Masking (VLSM)
+In the real world, you don't cut subnets into equal sizes. You want to subnet a subnet so that different groups have different sized networks to avoid wasting IPs. This is called **VLSM**.
+
+> **CRITICAL RULE FOR VLSM:**
+> Always subnet for the **largest host requirement first**, then the next largest, down to the smallest. Start each subnet immediately where the previous one ended.
+
+#### VLSM Example
+Address Block: `172.21.42.0/24` (256 addresses total). 
+Requirements: Workers (117 hosts), Robots (57 hosts), Servers (26 hosts), Guest (10 hosts).
+
+```text
+[ VLSM SUBNET TREE ]
+
+                     172.21.42.0/24 (256 IPs)
+                                │
+            ┌───────────────────┴───────────────────┐
+     Workers (/25)                           [Remaining]
+   172.21.42.0/25 (128 IPs)            172.21.42.128/25 (128 IPs)
+   Usable: .1 - .126                                │
+                                  ┌─────────────────┴─────────────────┐
+                           Robots (/26)                        [Remaining]
+                         172.21.42.128/26 (64 IPs)           172.21.42.192/26 (64 IPs)
+                         Usable: .129 - .190                         │
+                                                       ┌─────────────┴─────────────┐
+                                                Servers (/27)               [Remaining]
+                                              172.21.42.192/27 (32 IPs)   172.21.42.224/27 (32 IPs)
+                                              Usable: .193 - .222                  │
+                                                                           ┌───────┴───────┐
+                                                                     Guests (/28)       Unused
+                                                                   172.21.42.224/28    .240-.255
+                                                                   Usable: .225-.238   (16 IPs)
+```
+
+![VLSM sizing chart mapping hosts to subnets]
+
+1.  **Workers (117 hosts):**
+    *   We need `2^7 = 128` addresses (7 host bits). Subnet mask is `/25`.
+    *   **Subnet:** `172.21.42.0/25` (Range: `.0` to `.127`, Broadcast: `.127`).
+2.  **Robots (57 hosts):**
+    *   We pick up exactly where the last subnet ended: **`.128`**.
+    *   We need `2^6 = 64` addresses (6 host bits). Subnet mask is `/26`.
+    *   **Subnet:** `172.21.42.128/26` (Range: `.128` to `.191`, Broadcast: `.191`).
+3.  **Servers (26 hosts):**
+    *   We pick up at **`.192`**.
+    *   We need `2^5 = 32` addresses (5 host bits). Subnet mask is `/27`.
+    *   **Subnet:** `172.21.42.192/27` (Range: `.192` to `.223`, Broadcast: `.223`).
+4.  **Guests (10 hosts):**
+    *   We pick up at **`.224`**.
+    *   We need `2^4 = 16` addresses (4 host bits). Subnet mask is `/28`.
+    *   **Subnet:** `172.21.42.224/28` (Range: `.224` to `.239`, Broadcast: `.239`).
+
+---
+
+## Important Things to Remember
+
+*   **Network address:** The first IP in a subnet (e.g. `.0`). Reserved, cannot be used.
+*   **Broadcast address:** The last IP in a subnet (e.g. `.255`). Reserved, sends packets to everyone.
+*   **Stealing bits:** Steal from the *left* of the host bits when creating networks.
+*   **Saving bits:** Save bits from the *right* of the host bits when building for host counts.
+*   **Increment:** The value of the last network bit. It is the step size of your subnets.
+*   **VLSM Order:** Always address from the **largest** network requirement to the **smallest**.
+
+---
+
+## Diagram
+
+Here is how a single `/24` network is divided into four unequal subnets using VLSM:
+
+```text
++---------------------------------------------------------------------------------+
+|                                 172.21.42.0/24                                  |
++----------------------------------------+----------------------------------------+
+|             172.21.42.0/25             |             172.21.42.128/25           |
+|            Workers (128 IPs)           |                 (Split)                |
+|           .0 - .127 usable             +--------------------+-------------------+
+|                                        |  172.21.42.128/26  | 172.21.42.192/26  |
+|                                        |  Robots (64 IPs)   |      (Split)      |
+|                                        | .128 - .191 usable +---------+---------+
+|                                        |                    |  /27    |  /27    |
+|                                        |                    | Servers | Guests  |
+|                                        |                    | (32 IPs)| (32 IPs)|
++----------------------------------------+--------------------+---------+---------+
+```
+
+---
+
+## Related Topics
+
+*   [NAT & Private IPs](file:///home/trush/Downloads/x/05_nat_and_private_ips.md) - How we use private subnets to address internal devices and connect them to the internet.
+*   [Network Design & Security](file:///home/trush/Downloads/x/06_network_design_and_security.md) - How we assign these subnets to physical structures using VLANs.

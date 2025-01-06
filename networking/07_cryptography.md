@@ -97,3 +97,138 @@ Let's explore how computers protect data and how we test connections.
 ---
 
 ### 4. Basic Network Commands
+
+#### The `ping` Command
+*   **What it does:** Uses **ICMP (Internet Control Message Protocol)** packets to send a "hello" message to a destination IP or domain name and waits for a reply. It is the gold standard for checking if a host is alive.
+*   **Command usage:**
+    *   *Windows:* `ping google.com` (sends 4 packets by default and stops).
+    *   *Linux/Mac:* `ping google.com` (runs forever until stopped manually with **Ctrl + C**).
+    *   *Limit packets in Linux:* `ping -c 5 google.com` (sends exactly 5 packets).
+*   **Reading results:**
+    *   *100% Packets Received:* Target is online, and your internet is working.
+    *   *Error: "Temporary failure in name resolution":* Your internet is down, or your DNS settings are wrong (cannot translate name to IP).
+    *   *0% Packets Received:* The host is either down, or its firewall is blocking ICMP packets for security.
+
+#### The `ipconfig` (Windows) / `ifconfig` (Linux/Mac) Command
+*   **What it does:** Displays the IP address configuration of your network interface cards.
+*   **Windows Usage:**
+    *   `ipconfig /all`: Reveals every network detail, including your physical MAC address, current IPv4/IPv6 addresses, subnet mask, default gateway (router), and DNS servers.
+
+#### The `traceroute` (Linux) / `tracert` (Windows) Command
+*   **What it does:** Traces the path a packet takes hop-by-hop from your computer to a destination IP or domain name.
+*   **When to use it:** Diagnosing where a connection dies. If you cannot reach a website, `traceroute` shows you exactly which router along the path dropped your packet.
+*   **Command usage:**
+    *   *Windows:* `tracert google.com`
+    *   *Linux:* `traceroute google.com` (or `tracepath google.com`)
+*   **What the output looks like:**
+    ```text
+    $ tracepath -m 5 google.com
+     1?: [LOCALHOST]                        0.015ms pmtu 1500
+     1:  2409:40c1:4019:25b5::5                                5.069ms
+     2:  no reply
+     3:  2405:200:5210:3:3925::1                             345.072ms asymm  4
+     4:  no reply
+    ```
+    Each line represents a "hop" (a router). If you see `* * *` or `no reply`, it means that router timed out or blocked the request, helping you pinpoint where the network connection died.
+
+#### The `netstat -an` / `ss -tulnp` Command
+*   **What it does:** Displays active network connections and listening ports on your machine.
+*   **Why it matters:** Checking which service is listening on which port. This is essential for verifying if your web server (e.g., Apache on port 80/443) or SSH server (port 22) is actually running and listening for traffic.
+*   **Command usage:**
+    *   *Windows/Linux:* `netstat -an` (lists all active connections and ports numerically).
+    *   *Linux:* `ss -tulnp` (lists listening TCP/UDP ports and shows the process names/PIDs running them).
+*   **What the output looks like (`ss -tulnp`):**
+    ```text
+    $ ss -tulnp
+    Netid State  Recv-Q Send-Q   Local Address:Port    Peer Address:Port  Process
+    udp   UNCONN 0      0            127.0.0.1:53           0.0.0.0:*
+    tcp   LISTEN 0      4096         127.0.0.1:631          0.0.0.0:*
+    tcp   LISTEN 0      32           127.0.0.1:53           0.0.0.0:*
+    tcp   LISTEN 0      10           127.0.0.1:34949        0.0.0.0:*     users:(("antigravity",pid=57398,fd=68))
+    ```
+    *   `LISTEN` means the port is open and waiting for incoming connections.
+    *   `Local Address:Port` shows the IP and port number (e.g., `127.0.0.1:53` is DNS on localhost).
+
+#### The `curl -I` Command
+*   **What it does:** Fetches only the response headers from a web server without downloading the HTML body.
+*   **Why it matters:** Checking server status codes and server software types directly from the command line.
+*   **Command usage:** `curl -I https://google.com`
+*   **What the output looks like:**
+    ```text
+    $ curl -I https://google.com
+    HTTP/2 301
+    location: https://www.google.com/
+    content-type: text/html; charset=UTF-8
+    date: Fri, 17 Jul 2026 11:33:12 GMT
+    cache-control: public, max-age=2592000
+    server: gws
+    ```
+    *   `HTTP/2 301` shows the HTTP version and status code (301 Moved Permanently).
+    *   `server: gws` tells you the server software (Google Web Server).
+
+#### The `dig` Command
+*   **What it does:** A powerful DNS lookup utility for querying DNS name servers.
+*   **Why it matters:** Troubleshooting DNS issues. It shows the raw DNS records returned, query time, and the server that responded.
+*   **Command usage:** `dig google.com`
+*   **What the output looks like:**
+    ```text
+    $ dig google.com
+    ; <<>> DiG 9.20.18-1ubuntu2.1-Ubuntu <<>> google.com
+    ;; QUESTION SECTION:
+    ;google.com.                    IN      A
+
+    ;; ANSWER SECTION:
+    google.com.             0       IN      A       216.239.38.120
+
+    ;; Query time: 1 msec
+    ;; SERVER: 127.0.0.53#53(127.0.0.53) (UDP)
+    ```
+    *   `QUESTION SECTION` shows what you queried (`google.com` type `A` record).
+    *   `ANSWER SECTION` shows the result (IP address `216.239.38.120`).
+    *   `SERVER: 127.0.0.53#53` shows that your local DNS resolver resolved the query.
+
+---
+
+## Important Things to Remember
+
+*   **Symmetric:** One key for both locking and unlocking. Fast, but requires secure key exchange (Diffie-Hellman).
+*   **Asymmetric:** Two keys (Public and Private). More secure because private keys are never shared, but mathematically slower.
+*   **Hashing:** One-way, fixed-length fingerprint used to verify **Integrity** (no changes).
+*   **Collision:** When two different inputs produce the same hash. Secure hashes avoid this.
+*   **Ping:** Troubleshooting tool that sends ICMP packets.
+*   **ipconfig /all:** Displays active adapter configuration, including IPs, default gateways, and MAC addresses.
+
+---
+
+## Diagram
+
+### How Asymmetric Encryption Keeps a Message Private
+
+```text
+[ Sender: Computer A ]                                     [ Receiver: Computer B ]
+                                                                 
+                                                               B's Public Key
+  Plaintext message: "Hello"                                   (Shared publicly)
+            |                                                        |
+            v                                                        v
+   [ Encrypt with B's Public Key ]  ---------------------------------+
+            |
+            v
+   Ciphertext: "jggnq" (encrypted)
+            |
+            +------------( Travels over Internet )------------+
+                                                              |
+                                                              v
+                                                   [ Decrypt with B's Private Key ]
+                                                              |
+                                                              v
+                                                  Plaintext message: "Hello"
+                                                  (Decrypted successfully!)
+```
+
+---
+
+## Related Topics
+
+*   [Introduction to Networking Basics](file:///home/trush/Downloads/x/01_networking_basics.md) - The basics of IP and MAC addresses.
+*   [The OSI & TCP/IP Models](file:///home/trush/Downloads/x/03_osi_and_tcpip_models.md) - How encryption fits into the Presentation Layer (Layer 6).

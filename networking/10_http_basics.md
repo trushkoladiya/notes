@@ -98,3 +98,62 @@ HTTP messages are written in plain text (before encryption). Here is how they ar
 *   **Body:** The actual content. For requests, it contains form data or JSON files. For responses, it contains the HTML webpage, images, or API files.
 
 ---
+
+### 4. What HTTPS Adds Over HTTP
+HTTPS is simply HTTP running on top of an encrypted connection. It adds a security layer using **SSL/TLS**.
+
+```text
+[ HTTP vs. HTTPS SECURITY LAYERS ]
+
+        [ HTTP ]                         [ HTTPS ]
+   ┌─────────────────┐             ┌─────────────────┐
+   │ 7. Application  │             │ 7. Application  │ (HTTP Data)
+   ├─────────────────┤             ├─────────────────┤
+   │ 4. Transport    │             │    SSL / TLS    │ (Encryption Layer)
+   └─────────────────┘             ├─────────────────┤
+                                   │ 4. Transport    │ (TCP Port 443)
+                                   └─────────────────┘
+```
+
+*   **Port Change:** HTTP uses **Port 80** by default. HTTPS uses **Port 443** by default.
+*   **The TLS Handshake:** Before sending any HTTP data, the client and server perform a handshake:
+
+```text
+[ SSL/TLS HANDSHAKE FLOW ]
+
+  Client (Browser)                               Web Server
+         │                                           │
+         │──────── 1. ClientHello (Cipher list) ────>│
+         │                                           │
+         │<─────── 2. ServerHello & Certificate ─────│ (Includes Server Public Key)
+         │                                           │
+         │──────── 3. Verify Cert & Key Exchange ───>│ (Client encrypts pre-master
+         │                                           │  secret with server public key)
+         │<─────── 4. Session Keys Established ──────│ (Symmetric session key generated)
+         │                                           │
+         │<====== Encrypted HTTPS Data Exchanged ===>│ (All subsequent data encrypted)
+```
+
+    1.  **Cipher Agreement:** Client and server agree on which encryption algorithms to use.
+    2.  **Certificate Verification:** The server sends its **SSL/TLS Certificate** containing its **Public Key**. The client verifies this certificate with trusted authorities to ensure the website is genuine (e.g., verifying it's really google.com and not a fake site).
+    3.  **Key Exchange:** The client and server securely establish a symmetric session key.
+    4.  **Symmetric Encryption:** Once established, all HTTP headers and body data are encrypted using this symmetric key, making the connection private and tamper-proof.
+
+---
+
+## Important Things to Remember
+
+*   **HTTP Methods:** Action verbs (`GET` for reading, `POST` for creating, `PUT`/`PATCH` for updating, `DELETE` for removing).
+*   **Status Code Ranges:** 
+    *   `2xx` = Success
+    *   `3xx` = Redirection
+    *   `4xx` = Client Error (your fault)
+    *   `5xx` = Server Error (server's fault)
+*   **HTTPS Encryption:** Uses asymmetric encryption (certificates/public keys) to securely exchange keys, then switches to fast symmetric encryption for the rest of the web traffic.
+
+---
+
+## Related Topics
+
+*   [The OSI & TCP/IP Models](file:///home/trush/Downloads/x/networking/03_osi_and_tcpip_models.md) - How HTTP runs on top of TCP.
+*   [Basic Cryptography & Network Commands](file:///home/trush/Downloads/x/networking/07_cryptography.md) - Explains symmetric vs asymmetric encryption and using `curl -I` to inspect status codes.
